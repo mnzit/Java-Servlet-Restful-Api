@@ -44,7 +44,7 @@ public class StudentServiceImpl implements StudentService {
         student.setAddress(studentDTO.getAddress());
         student.setCourse(new Course(studentDTO.getCourseId()));
 
-        if (studentDao.save(student)) {
+        if (!studentDao.save(student)) {
             throw new SaveUpdateFailureException("Student save failed!");
         }
 

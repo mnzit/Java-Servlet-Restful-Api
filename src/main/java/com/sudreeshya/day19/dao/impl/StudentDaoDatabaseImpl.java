@@ -37,7 +37,7 @@ public class StudentDaoDatabaseImpl implements StudentDao {
         String query = "SELECT * FROM STUDENTS";
         try {
 
-            jdbcTemplate.getAll(query, new StudentMapper());
+            students = jdbcTemplate.getAll(query, new StudentMapper());
         } catch (Exception ex) {
             Logger.getLogger(StudentDaoDatabaseImpl.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -69,7 +69,9 @@ public class StudentDaoDatabaseImpl implements StudentDao {
                         student.getCourse().getId()
                     });
 
-            return result > 0;
+            log.debug("result : {}", result);
+
+            return result >= 0;
         } catch (Exception ex) {
             log.error("Exception : {}", ex.getMessage());
         }
