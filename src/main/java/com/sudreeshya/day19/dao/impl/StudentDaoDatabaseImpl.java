@@ -2,17 +2,16 @@ package com.sudreeshya.day19.dao.impl;
 
 import com.sudreeshya.day19.dao.CourseDao;
 import com.sudreeshya.day19.dao.StudentDao;
+import com.sudreeshya.day19.db.JdbcTemplate;
+import com.sudreeshya.day19.db.RowMapper;
 import com.sudreeshya.day19.model.Course;
 import com.sudreeshya.day19.model.Student;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,248 +23,119 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 public class StudentDaoDatabaseImpl implements StudentDao {
 
+    private JdbcTemplate<Student> jdbcTemplate = new JdbcTemplate<>();
+
     private final CourseDao courseDao;
 
+    public StudentDaoDatabaseImpl(CourseDao courseDao) {
+        this.courseDao = courseDao;
+    }
+
     @Override
-    public List<Student> fetchAllStudents() {
-        List<Student> students = new ArrayList<>();
-        Connection connection = null;
-        Statement stmt = null;
+    public List<Student> fetchAll() {
+        List<Student> students = null;
+        String query = "SELECT * FROM STUDENTS";
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
 
-            //Connection established
-            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/SCHOOL?useSSL=false", "root", "root");
-
-            // Create statement 
-            stmt = connection.createStatement();
-
-            // Execution
-            ResultSet rs = stmt.executeQuery("SELECT * FROM STUDENTS");
-
-            students = new ArrayList<>();
-
-            while (rs.next()) {
-                log.debug("Student id: {} , name: {}", rs.getLong("id"), rs.getString("firstname") + rs.getString("lastname"));
-                Student student = new Student();
-
-                Long studentId = rs.getLong("id");
-                String firstname = rs.getString("firstname");
-                String lastname = rs.getString("lastname");
-                String address = rs.getString("address");
-                String contactNo = rs.getString("contact_no");
-                Date createdDate = rs.getDate("created_date");
-                Long courseId = rs.getLong("course_id");
-
-                student.setId(studentId);
-                student.setFirstname(firstname);
-                student.setLastname(lastname);
-                student.setContactNo(contactNo);
-                student.setAddress(address);
-                student.setCreatedDate(createdDate);
-
-                Course course = courseDao.fetchCourseById(courseId);
-                student.setCourse(course);
-                students.add(student);
-            }
-
-            connection.close();
-            stmt.close();
-
-        } catch (ClassNotFoundException | SQLException ex) {
-            log.error("Exception : {}", ex.getMessage());
-        } finally {
-            try {
-                if (connection != null) {
-                    connection.close();
-                    stmt.close();
-                }
-            } catch (Exception ex) {
-                log.error("Exception : {}", ex.getMessage());
-            }
+            jdbcTemplate.getAll(query, new StudentMapper());
+        } catch (Exception ex) {
+            Logger.getLogger(StudentDaoDatabaseImpl.class.getName()).log(Level.SEVERE, null, ex);
         }
         return students;
     }
 
     @Override
-    public Student fetchStudentById(Long id) {
+    public Student fetchById(Long id) {
         Student student = null;
-        Connection connection = null;
-        Statement stmt = null;
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-
-            //Connection established
-            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/SCHOOL?useSSL=false", "root", "root");
-
-            // Create statement 
-            stmt = connection.createStatement();
-
-            // Execution
-            ResultSet rs = stmt.executeQuery("SELECT * FROM STUDENTS WHERE id=" + id);
-
-            while (rs.next()) {
-                log.debug("Student id: {} , name: {}", rs.getLong("id"), rs.getString("firstname") + rs.getString("lastname"));
-                student = new Student();
-
-                Long studentId = rs.getLong("id");
-                String firstname = rs.getString("firstname");
-                String lastname = rs.getString("lastname");
-                String address = rs.getString("address");
-                String contactNo = rs.getString("contact_no");
-                Date createdDate = rs.getDate("created_date");
-                Long courseId = rs.getLong("course_id");
-
-                student.setId(studentId);
-                student.setFirstname(firstname);
-                student.setLastname(lastname);
-                student.setContactNo(contactNo);
-                student.setAddress(address);
-                student.setCreatedDate(createdDate);
-
-                Course course = courseDao.fetchCourseById(courseId);
-                student.setCourse(course);
-            }
-
-            connection.close();
-            stmt.close();
-
-        } catch (ClassNotFoundException | SQLException ex) {
+            String sql = "SELECT * FROM STUDENTS WHERE id=?";
+            student = jdbcTemplate.getByObject(sql, new Object[]{id}, new StudentMapper());
+        } catch (Exception ex) {
             log.error("Exception : {}", ex.getMessage());
-        } finally {
-            try {
-                if (connection != null) {
-                    connection.close();
-                    stmt.close();
-                }
-            } catch (Exception ex) {
-                log.error("Exception : {}", ex.getMessage());
-            }
         }
         return student;
     }
 
     @Override
-    public Boolean saveStudent(Student student) {
-        Connection connection = null;
-        PreparedStatement pstmt = null;
+    public Boolean save(Student student) {
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-
-            //Connection established
-            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/SCHOOL?useSSL=false", "root", "root");
             String sql = "INSERT INTO STUDENTS (firstname,lastname,address,contact_no,course_id) VALUES (?,?,?,?,?)";
+            int result = jdbcTemplate.update(sql,
+                    new Object[]{
+                        student.getFirstname(),
+                        student.getLastname(),
+                        student.getAddress(),
+                        student.getContactNo(),
+                        student.getCourse().getId()
+                    });
 
-            // Create statement 
-            pstmt = connection.prepareStatement(sql);
-            pstmt.setString(1, student.getFirstname());
-            pstmt.setString(2, student.getLastname());
-            pstmt.setString(3, student.getAddress());
-            pstmt.setString(4, student.getContactNo());
-            pstmt.setLong(5, student.getCourse().getId());
-
-            // Execution    
-            boolean result = pstmt.execute();
-
-            connection.close();
-            pstmt.close();
-
-            return result;
-
-        } catch (ClassNotFoundException | SQLException ex) {
+            return result > 0;
+        } catch (Exception ex) {
             log.error("Exception : {}", ex.getMessage());
-        } finally {
-            try {
-                if (connection != null) {
-                    connection.close();
-                    pstmt.close();
-                }
-            } catch (Exception ex) {
-                log.error("Exception : {}", ex.getMessage());
-            }
         }
         return false;
     }
 
     @Override
-    public Boolean updateStudent(Student student) {
-        Connection connection = null;
-        PreparedStatement pstmt = null;
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+    public Boolean update(Student student) {
 
-            //Connection established
-            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/SCHOOL?useSSL=false", "root", "root");
+        try {
             String sql = "UPDATE STUDENTS SET firstname=?,lastname=?,address=?,contact_no=?,course_id=? WHERE id=?";
-
-            // Create statement 
-            pstmt = connection.prepareStatement(sql);
-            pstmt.setString(1, student.getFirstname());
-            pstmt.setString(2, student.getLastname());
-            pstmt.setString(3, student.getAddress());
-            pstmt.setString(4, student.getContactNo());
-            pstmt.setLong(5, student.getCourse().getId());
-            pstmt.setLong(6, student.getId());
-
-            // Execution    
-            boolean result = pstmt.execute();
-
-            connection.close();
-            pstmt.close();
-
-            return result;
-
-        } catch (ClassNotFoundException | SQLException ex) {
+            int result = jdbcTemplate.update(sql,
+                    new Object[]{
+                        student.getFirstname(),
+                        student.getLastname(),
+                        student.getAddress(),
+                        student.getContactNo(),
+                        student.getCourse().getId(),
+                        student.getId()
+                    });
+            return result > 0;
+        } catch (Exception ex) {
             log.error("Exception : {}", ex.getMessage());
-        } finally {
-            try {
-                if (connection != null) {
-                    connection.close();
-                    pstmt.close();
-                }
-            } catch (Exception ex) {
-                log.error("Exception : {}", ex.getMessage());
-            }
         }
         return false;
     }
 
     @Override
-    public Boolean deleteStudentById(Long id) {
-        Connection connection = null;
-        PreparedStatement pstmt = null;
+    public Boolean deleteById(Long id) {
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-
-            //Connection established
-            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/SCHOOL?useSSL=false", "root", "root");
             String sql = "DELETE FROM STUDENTS WHERE id=?";
-
-            // Create statement 
-            pstmt = connection.prepareStatement(sql);
-            pstmt.setLong(1, id);
-            
-            // Execution    
-            boolean result = pstmt.execute();
-
-            connection.close();
-            pstmt.close();
-
-            return result;
-
-        } catch (ClassNotFoundException | SQLException ex) {
+            int result = jdbcTemplate.update(
+                    sql,
+                    new Object[]{id}
+            );
+            return result > 0;
+        } catch (Exception ex) {
             log.error("Exception : {}", ex.getMessage());
-        } finally {
-            try {
-                if (connection != null) {
-                    connection.close();
-                    pstmt.close();
-                }
-            } catch (Exception ex) {
-                log.error("Exception : {}", ex.getMessage());
-            }
         }
         return false;
     }
 
+    private class StudentMapper implements RowMapper<Student> {
+
+        @Override
+        public Student map(ResultSet rs) throws SQLException {
+            Student student = new Student();
+
+            Long studentId = rs.getLong("id");
+            String firstname = rs.getString("firstname");
+            String lastname = rs.getString("lastname");
+            String address = rs.getString("address");
+            String contactNo = rs.getString("contact_no");
+            Date createdDate = rs.getDate("created_date");
+            Long courseId = rs.getLong("course_id");
+
+            student.setId(studentId);
+            student.setFirstname(firstname);
+            student.setLastname(lastname);
+            student.setContactNo(contactNo);
+            student.setAddress(address);
+            student.setCreatedDate(createdDate);
+
+            Course course = courseDao.fetchById(courseId);
+            student.setCourse(course);
+            return student;
+        }
+    }
 }

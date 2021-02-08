@@ -25,12 +25,12 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public List<Student> getAllStudents() {
-        return studentDao.fetchAllStudents();
+        return studentDao.fetchAll();
     }
 
     @Override
     public Student getStudentById(Long id) {
-        return studentDao.fetchStudentById(id);
+        return studentDao.fetchById(id);
     }
 
     @Override
@@ -44,7 +44,7 @@ public class StudentServiceImpl implements StudentService {
         student.setAddress(studentDTO.getAddress());
         student.setCourse(new Course(studentDTO.getCourseId()));
 
-        if (studentDao.saveStudent(student)) {
+        if (studentDao.save(student)) {
             throw new SaveUpdateFailureException("Student save failed!");
         }
 
@@ -54,7 +54,7 @@ public class StudentServiceImpl implements StudentService {
     public void updateStudent(StudentDTO studentDTO, Long id) {
 
         // Reads old data from database;
-        Student studentFromDB = studentDao.fetchStudentById(id);
+        Student studentFromDB = studentDao.fetchById(id);
 
         if (studentDTO == null) {
             throw new DataNotFoundException("Student not found with id=" + id);
@@ -76,7 +76,7 @@ public class StudentServiceImpl implements StudentService {
                 studentFromDB.setCourse(new Course(studentDTO.getCourseId()));
             }
 
-            if (studentDao.updateStudent(studentFromDB)) {
+            if (studentDao.update(studentFromDB)) {
                 throw new SaveUpdateFailureException("Student update failed!");
             }
         }
@@ -85,6 +85,6 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public void deleteStudent(Long id) {
-        log.info("studentDao.deleteStudentById(id) : {}", studentDao.deleteStudentById(id));
+        log.info("studentDao.deleteStudentById(id) : {}", studentDao.deleteById(id));
     }
 }
